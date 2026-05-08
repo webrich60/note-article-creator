@@ -10,6 +10,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Identity Services (Googleログイン用) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -52,9 +54,66 @@
         }
     </style>
 </head>
-<body class="bg-[#F8F9FA] min-h-screen flex justify-center py-10 px-4 font-sans text-gray-900 relative">
+<body class="bg-[#F8F9FA] min-h-screen flex justify-center items-center py-10 px-4 font-sans text-gray-900 relative">
 
-    <div class="w-full max-w-4xl bg-white rounded-2xl shadow-sm border border-gray-300 overflow-hidden relative z-10">
+    <!-- 🔑 ログイン画面 -->
+    <div id="login-container" class="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-300 p-10 flex flex-col items-center relative z-10 animate-fadeIn">
+        <div class="w-16 h-16 bg-[#41C9B4] text-white rounded-full flex items-center justify-center mb-6 shadow-md">
+            <i data-lucide="lock" class="w-8 h-8"></i>
+        </div>
+        <h1 class="text-2xl font-bold mb-2 text-gray-800">売れる記事作成くん</h1>
+        <p class="text-sm text-gray-500 mb-6 text-center">ログインして利用を開始してください。</p>
+        
+        <!-- メールアドレスログイン/登録フォーム -->
+        <div class="w-full mb-6">
+            <div class="flex justify-center mb-4 border-b border-gray-200">
+                <button id="tab-register" onclick="switchAuthMode('register')" class="pb-2 px-4 font-bold text-[#41C9B4] border-b-2 border-[#41C9B4]">新規登録</button>
+                <button id="tab-login" onclick="switchAuthMode('login')" class="pb-2 px-4 font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600 transition-colors">ログイン</button>
+            </div>
+            
+            <div id="auth-error" class="hidden mb-3 p-3 bg-red-50 text-red-600 text-xs font-bold rounded-lg text-center border border-red-200"></div>
+
+            <form id="email-auth-form" onsubmit="handleEmailAuth(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">メールアドレス</label>
+                    <input type="email" id="auth-email" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:outline-none focus:border-[#41C9B4] focus:ring-1 focus:ring-[#41C9B4] transition-colors" placeholder="email@example.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">パスワード</label>
+                    <input type="password" id="auth-password" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:outline-none focus:border-[#41C9B4] focus:ring-1 focus:ring-[#41C9B4] transition-colors" placeholder="6文字以上">
+                </div>
+                <button type="submit" id="auth-submit-btn" class="w-full py-3 rounded-full font-bold bg-[#41C9B4] text-white hover:bg-[#38b3a0] shadow-md transition-colors">
+                    新規登録
+                </button>
+            </form>
+        </div>
+
+        <div class="flex items-center w-full mb-6">
+            <hr class="flex-grow border-gray-200">
+            <span class="px-3 text-xs text-gray-400 font-bold">または</span>
+            <hr class="flex-grow border-gray-200">
+        </div>
+
+        <!-- Googleログインボタンの設定 -->
+        <div id="g_id_onload"
+             data-client_id="868927797743-0i5jc3jfiiis1a163qfd1qgp6gp8a8qi.apps.googleusercontent.com"
+             data-context="signin"
+             data-ux_mode="popup"
+             data-callback="handleCredentialResponse"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-shape="pill"
+             data-theme="outline"
+             data-text="signin_with"
+             data-size="large"
+             data-logo_alignment="left">
+        </div>
+    </div>
+
+    <!-- 📝 アプリ本体（ログイン成功後に表示） -->
+    <div id="app-container" class="hidden w-full max-w-4xl bg-white rounded-2xl shadow-sm border border-gray-300 overflow-hidden relative z-10 self-start animate-fadeIn">
         
         <!-- Header -->
         <div class="p-8 border-b border-gray-300">
@@ -86,10 +145,18 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
+                    <!-- ログインユーザーアイコン -->
+                    <img id="user-profile-img" src="" class="hidden w-8 h-8 rounded-full border border-gray-300 shadow-sm" title="Googleアカウント">
+                    <!-- ログアウトボタン -->
+                    <button onclick="logout()" class="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-gray-100" title="ログアウト">
+                        <i data-lucide="log-out" class="w-5 h-5"></i>
+                    </button>
+                    <!-- 履歴ボタン -->
                     <button onclick="openHistoryModal()" class="text-gray-600 border-2 border-gray-300 rounded-full px-4 py-1.5 text-sm hover:bg-gray-50 transition-colors flex items-center gap-1 font-bold">
                         <i data-lucide="history" class="w-4 h-4"></i> 履歴
                     </button>
-                    <button class="text-[#41C9B4] border-2 border-[#41C9B4] rounded-full px-4 py-1.5 text-sm hover:bg-teal-50 transition-colors flex items-center gap-1 font-bold">
+                    <!-- noteログインボタン -->
+                    <button onclick="window.open('https://note.com/login', '_blank')" class="text-[#41C9B4] border-2 border-[#41C9B4] rounded-full px-4 py-1.5 text-sm hover:bg-teal-50 transition-colors flex items-center gap-1 font-bold">
                         noteログイン <i data-lucide="arrow-left" class="w-4 h-4 transform rotate-135"></i>
                     </button>
                 </div>
@@ -222,12 +289,9 @@
     </div>
 
     <script>
-        /**
-         * セキュリティ対策：右クリック・ソース表示ショートカットの禁止
-         */
+        /** セキュリティ対策（右クリック等の禁止） **/
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('keydown', e => {
-            // F12キー, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U を無効化
             if (e.keyCode === 123 || 
                 (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || 
                 (e.ctrlKey && e.keyCode === 85)) {
@@ -236,7 +300,157 @@
             }
         });
 
-        // --- 状態管理 ---
+        // --- Googleログイン関連 ---
+        
+        // ログイン成功時にGoogleから呼ばれる関数
+        function handleCredentialResponse(response) {
+            try {
+                // JWTトークンを解読して名前や画像を取り出す
+                const payload = decodeJwtResponse(response.credential);
+                
+                // ログイン状態とユーザー情報を保存
+                localStorage.setItem('appLoggedIn', 'true');
+                localStorage.setItem('appUserInfo', JSON.stringify({
+                    name: payload.name,
+                    picture: payload.picture
+                }));
+                
+                // アプリ画面に切り替え
+                showApp();
+            } catch (e) {
+                console.error("ログイン処理に失敗しました", e);
+            }
+        }
+
+        // トークン解読用の裏方関数
+        function decodeJwtResponse(token) {
+            var base64Url = token.split('.')[1];
+            var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        }
+
+        // ロード時にログインしているかチェックする
+        function checkLoginStatus() {
+            if (localStorage.getItem('appLoggedIn') === 'true') {
+                showApp();
+            } else {
+                showLogin();
+            }
+        }
+
+        // アプリ画面を表示する
+        function showApp() {
+            document.getElementById('login-container').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            // 背景のセンタリングを解除（アプリが縦に長い場合を考慮）
+            document.body.classList.remove('items-center');
+            
+            // アイコン画像を表示
+            const userInfoStr = localStorage.getItem('appUserInfo');
+            if (userInfoStr) {
+                try {
+                    const userInfo = JSON.parse(userInfoStr);
+                    const imgEl = document.getElementById('user-profile-img');
+                    if (userInfo.picture) {
+                        imgEl.src = userInfo.picture;
+                        imgEl.classList.remove('hidden');
+                        imgEl.title = userInfo.name + " としてログイン中";
+                    }
+                } catch(e){}
+            }
+        }
+
+        // ログイン画面を表示する
+        function showLogin() {
+            document.getElementById('login-container').classList.remove('hidden');
+            document.getElementById('app-container').classList.add('hidden');
+            document.body.classList.add('items-center');
+        }
+
+        // ログアウト処理
+        function logout() {
+            if(confirm("ログアウトしてログイン画面に戻りますか？")) {
+                localStorage.removeItem('appLoggedIn');
+                localStorage.removeItem('appUserInfo');
+                showLogin();
+            }
+        }
+
+        // --- メールアドレス認証関連 ---
+        let authMode = 'register';
+
+        function switchAuthMode(mode) {
+            authMode = mode;
+            const tabLogin = document.getElementById('tab-login');
+            const tabRegister = document.getElementById('tab-register');
+            const submitBtn = document.getElementById('auth-submit-btn');
+            const errorDiv = document.getElementById('auth-error');
+            
+            errorDiv.classList.add('hidden');
+            
+            if (mode === 'login') {
+                tabLogin.className = "pb-2 px-4 font-bold text-[#41C9B4] border-b-2 border-[#41C9B4]";
+                tabRegister.className = "pb-2 px-4 font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600 transition-colors";
+                submitBtn.innerText = "ログイン";
+            } else {
+                tabRegister.className = "pb-2 px-4 font-bold text-[#41C9B4] border-b-2 border-[#41C9B4]";
+                tabLogin.className = "pb-2 px-4 font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600 transition-colors";
+                submitBtn.innerText = "新規登録";
+            }
+        }
+
+        function handleEmailAuth(event) {
+            event.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const errorDiv = document.getElementById('auth-error');
+            
+            // 簡易的なローカルストレージを使ったユーザー管理
+            let users = JSON.parse(localStorage.getItem('appUsers') || '{}');
+
+            if (authMode === 'register') {
+                if (users[email]) {
+                    errorDiv.innerText = "このメールアドレスは既に登録されています。";
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+                if (password.length < 6) {
+                    errorDiv.innerText = "パスワードは6文字以上で入力してください。";
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+                // ユーザー登録
+                users[email] = { password: password, name: email.split('@')[0] };
+                localStorage.setItem('appUsers', JSON.stringify(users));
+                
+                // 登録成功したらそのままログイン状態にする
+                loginSuccess({ name: email.split('@')[0], picture: '' });
+
+            } else if (authMode === 'login') {
+                const user = users[email];
+                if (!user || user.password !== password) {
+                    errorDiv.innerText = "メールアドレスまたはパスワードが間違っています。";
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+                // ログイン成功
+                loginSuccess({ name: user.name, picture: '' });
+            }
+        }
+
+        function loginSuccess(userInfo) {
+            localStorage.setItem('appLoggedIn', 'true');
+            localStorage.setItem('appUserInfo', JSON.stringify(userInfo));
+            document.getElementById('auth-email').value = '';
+            document.getElementById('auth-password').value = '';
+            document.getElementById('auth-error').classList.add('hidden');
+            showApp();
+        }
+
+        // --- 以下、既存のアプリの仕組み ---
         let currentStep = 1;
         let formData = {
             name: '', jobTitle: '', experience: '', tone: '', strength: '',
@@ -274,6 +488,9 @@
             renderCategories();
             renderPrices();
             setupEventListeners();
+            
+            // ページ読み込み時にログイン状態をチェックする！
+            checkLoginStatus();
         }
 
         function setupEventListeners() {
