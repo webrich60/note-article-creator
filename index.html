@@ -148,7 +148,7 @@
 
                 <div class="mt-8 flex justify-center">
                     <button id="btn-next-to-2" class="w-full max-w-md py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-[#41C9B4] text-white hover:bg-[#38b3a0] shadow-md">
-                        次へ：カテゴリを選ぶ <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                        <span>次へ：カテゴリを選ぶ</span> <i data-lucide="chevron-right" class="w-5 h-5"></i>
                     </button>
                 </div>
             </div>
@@ -160,7 +160,7 @@
                 <div class="mt-8 flex justify-center gap-4">
                     <button onclick="goToStep(1)" class="px-8 py-3 rounded-full font-bold border-2 border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">戻る</button>
                     <button id="btn-next-to-3" disabled class="flex-1 max-w-sm py-3 rounded-full font-bold bg-gray-300 text-gray-500 cursor-not-allowed flex justify-center items-center gap-2">
-                        次へ：キーワード <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                        <span>次へ：キーワード</span> <i data-lucide="chevron-right" class="w-5 h-5"></i>
                     </button>
                 </div>
             </div>
@@ -172,7 +172,7 @@
                 <div class="mt-8 flex justify-center gap-4">
                     <button onclick="goToStep(2)" class="px-6 py-3 text-gray-700 hover:bg-gray-200 rounded-full font-bold">戻る</button>
                     <button id="btn-generate-ideas" disabled class="flex-1 max-w-sm py-4 rounded-full font-bold flex justify-center items-center gap-2 bg-gray-300 text-gray-500">
-                        記事候補を生成する <i data-lucide="bot" class="w-5 h-5"></i>
+                        <span>記事候補を生成する</span> <i data-lucide="bot" class="w-5 h-5"></i>
                     </button>
                 </div>
             </div>
@@ -188,7 +188,7 @@
                     <div class="mt-8 flex justify-center gap-4">
                         <button onclick="goToStep(3)" class="px-6 py-3 text-gray-700 hover:bg-gray-200 rounded-full font-bold">やり直す</button>
                         <button id="btn-generate-article" disabled class="px-8 py-4 rounded-full font-bold bg-gray-300 text-gray-500 flex justify-center items-center gap-2">
-                            この記事を執筆する <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                            <span>この記事を執筆する</span> <i data-lucide="chevron-right" class="w-5 h-5"></i>
                         </button>
                     </div>
                 </div>
@@ -369,16 +369,29 @@
             });
             const kwEl = document.getElementById('input-keyword');
             if (kwEl) kwEl.addEventListener('input', e => { formData.keyword = e.target.value; validate3(); });
+            
+            // 💡 ここが抜けていたため、ボタンを押しても進みませんでした！修正済みです！
             document.getElementById('btn-next-to-2').addEventListener('click', () => goToStep(2));
+            document.getElementById('btn-next-to-3').addEventListener('click', () => goToStep(3)); 
             document.getElementById('btn-generate-ideas').addEventListener('click', handleIdeas);
             document.getElementById('btn-generate-article').addEventListener('click', handleArticle);
         }
+        
         function validate1() { const v = formData.name && formData.jobTitle && formData.experience; const b = document.getElementById('btn-next-to-2'); b.disabled = !v; b.className = v ? "w-full max-w-md py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-[#41C9B4] text-white hover:bg-[#38b3a0] shadow-md" : "w-full max-w-md py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-gray-300 text-gray-500 cursor-not-allowed"; }
         function validate3() { const v = !!formData.keyword; const b = document.getElementById('btn-generate-ideas'); b.disabled = !v; b.className = v ? "flex-1 max-w-sm py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-[#41C9B4] text-white shadow-md" : "flex-1 max-w-sm py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-gray-300 text-gray-500 cursor-not-allowed"; }
         function goToStep(s) { currentStep = s; renderStepIndicator(); for(let i=1; i<=5; i++) { const el = document.getElementById('step-'+i); if(el) el.classList.toggle('hidden-step', i !== s); } window.scrollTo(0, 0); }
         function renderStepIndicator() { const s = ['プロフ', 'カテゴリ', 'キーワード', '案', '完成']; let h = '<div class="absolute left-0 top-1/2 w-full h-[1px] bg-gray-200"></div>'; s.forEach((l, i) => { const n = i + 1; const act = currentStep === n; const pas = currentStep > n; h += `<div class="relative z-10 bg-white px-1 flex flex-col items-center"><div class="w-7 h-7 rounded-full border-2 flex items-center justify-center font-bold text-xs ${act ? 'border-[#41C9B4] text-[#41C9B4]' : pas ? 'bg-[#41C9B4] border-[#41C9B4] text-white' : 'border-gray-300 text-gray-400'}">${pas?'✓':n}</div><span class="text-[9px] mt-1">${l}</span></div>`; }); document.getElementById('step-indicator').innerHTML = h; }
+        
         function renderCategories() { document.getElementById('category-container').innerHTML = CATEGORIES.map(c => `<button onclick="selectCat('${c.id}')" class="flex flex-col items-center p-3 border-2 rounded-xl transition-all ${formData.categoryId===c.id?'border-[#41C9B4] bg-teal-50 shadow-inner':'border-gray-100 hover:border-gray-300'}"><i data-lucide="${c.icon}" class="mb-1 w-5 h-5 ${c.color}"></i><span class="text-[10px] font-bold">${c.label}</span></button>`).join(''); lucide.createIcons(); }
-        function selectCat(id) { formData.categoryId = id; renderCategories(); const b = document.getElementById('btn-next-to-3'); b.disabled = false; b.className = "flex-1 max-w-sm py-3 rounded-full font-bold flex justify-center items-center gap-2 bg-[#41C9B4] text-white shadow-md"; }
+        function selectCat(id) { 
+            formData.categoryId = id; 
+            renderCategories(); 
+            const b = document.getElementById('btn-next-to-3'); 
+            b.disabled = false; 
+            // 💡 ここでも「＞」が崩れないように flex を正しく設定し直しました！
+            b.className = "flex-1 max-w-sm py-3 rounded-full font-bold flex justify-center items-center gap-2 bg-[#41C9B4] text-white shadow-md transition-colors hover:bg-[#38b3a0]"; 
+        }
+        
         function renderPrices() { const T = [{id:'free',l:'無料'},{id:'300',l:'300円'},{id:'500_800',l:'500円〜'},{id:'1000_2000',l:'1000円〜'},{id:'3000_',l:'3000円〜'}]; document.getElementById('price-container').innerHTML = T.map(t => `<button onclick="selectPrice('${t.id}')" class="p-2 border-2 rounded-xl text-[10px] font-bold ${formData.priceId===t.id?'border-[#41C9B4] bg-teal-50':'border-gray-100'}">${t.l}</button>`).join(''); }
         function selectPrice(id) { formData.priceId = id; renderPrices(); }
 
@@ -396,7 +409,7 @@
         }
         async function handleIdeas() { goToStep(4); document.getElementById('step-4-loading').classList.remove('hidden'); document.getElementById('step-4-content').classList.add('hidden'); try { const c = CATEGORIES.find(x=>x.id===formData.categoryId).label; const prompt = `ライター${formData.name}(${formData.jobTitle})として、${formData.keyword}のnote案を3つ。カテゴリ：${c}。JSON配列のみ：[{"title":"案1","catchphrase":"キャッチ","outline":["見出し"]}]`; generatedIdeas = await callAPI(prompt, true); renderIdeas(); document.getElementById('step-4-loading').classList.add('hidden'); document.getElementById('step-4-content').classList.remove('hidden'); } catch (e) { alert("Error: " + e.message); goToStep(3); } }
         function renderIdeas() { document.getElementById('ideas-container').innerHTML = generatedIdeas.map((idea, i) => `<div onclick="selectIdea(${i})" class="p-4 border-2 rounded-xl cursor-pointer ${selectedIdeaIndex===i?'border-[#41C9B4] bg-teal-50':'border-gray-100'}"><h4 class="font-bold text-sm">${idea.title}</h4><p class="text-xs text-teal-600">${idea.catchphrase}</p></div>`).join(''); }
-        function selectIdea(i) { selectedIdeaIndex = i; renderIdeas(); const b = document.getElementById('btn-generate-article'); b.disabled = false; b.className = "px-8 py-4 rounded-full font-bold flex justify-center items-center gap-2 bg-[#41C9B4] text-white shadow-md"; }
+        function selectIdea(i) { selectedIdeaIndex = i; renderIdeas(); const b = document.getElementById('btn-generate-article'); b.disabled = false; b.className = "px-8 py-4 rounded-full font-bold flex justify-center items-center gap-2 bg-[#41C9B4] text-white shadow-md transition-colors hover:bg-[#38b3a0]"; }
         async function handleArticle() { goToStep(5); document.getElementById('step-5-loading').classList.remove('hidden'); document.getElementById('step-5-content').classList.add('hidden'); try { const id = generatedIdeas[selectedIdeaIndex]; const prompt = `${formData.name}として、タイトル「${id.title}」、構成「${id.outline.join('、')}」で記事を書いて。`; const art = await callAPI(prompt, false); document.getElementById('final-article-content').innerText = art; saveHistory(art, id); document.getElementById('step-5-loading').classList.add('hidden'); document.getElementById('step-5-content').classList.remove('hidden'); } catch (e) { alert("Error: " + e.message); goToStep(4); } }
         
         function saveHistory(t, idea) { let h = JSON.parse(localStorage.getItem('articleCreatorHistory') || '[]'); h.unshift({ id: Date.now(), date: new Date().toLocaleString(), title: idea.title, content: t }); localStorage.setItem('articleCreatorHistory', JSON.stringify(h.slice(0, 30))); }
