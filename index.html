@@ -11,7 +11,9 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fadeIn { animation: fadeIn 0.4s ease-out forwards; }
+        .animate-slideDown { animation: slideDown 0.3s ease-out forwards; }
         .hidden-step { display: none !important; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
@@ -19,9 +21,51 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         body { user-select: none; -webkit-user-select: none; }
         #final-article-content, #history-article-body { user-select: text; -webkit-user-select: text; }
+        input[type="radio"]:checked { accent-color: #41C9B4; }
     </style>
 </head>
 <body class="bg-[#F8F9FA] min-h-screen flex justify-center items-center py-6 sm:py-10 px-4 font-sans text-gray-900 relative">
+
+    <!-- 🔔 共通エラーポップアップ（アラート） -->
+    <div id="alert-modal" class="hidden fixed inset-0 z-[100] flex justify-center items-start pt-20 bg-gray-900 bg-opacity-20 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl border border-red-200 p-6 max-w-sm w-full mx-4 animate-slideDown flex items-start gap-4">
+            <div class="bg-red-100 text-red-500 rounded-full p-2 shrink-0">
+                <i data-lucide="alert-circle" class="w-6 h-6"></i>
+            </div>
+            <div class="flex-1">
+                <h3 class="font-bold text-gray-900 mb-1">エラー</h3>
+                <p id="alert-message" class="text-sm text-gray-600 mb-4"></p>
+                <div class="flex justify-end">
+                    <button onclick="closeAlert()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg text-sm font-bold transition-colors">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔑 パスワード再設定モーダル -->
+    <div id="reset-modal" class="hidden fixed inset-0 z-50 flex justify-center items-center p-4 bg-gray-900 bg-opacity-50 backdrop-blur-sm animate-fadeIn">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
+            <h2 class="text-xl font-bold mb-2 flex items-center gap-2 text-gray-800">
+                <i data-lucide="key-round" class="text-[#41C9B4]"></i> パスワードの再設定
+            </h2>
+            <p class="text-xs text-gray-500 mb-6">登録しているメールアドレスと、新しいパスワードを入力してください。</p>
+            
+            <form onsubmit="handlePasswordReset(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">登録メールアドレス</label>
+                    <input type="email" id="reset-email" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:outline-none focus:border-[#41C9B4]" placeholder="email@example.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">新しいパスワード</label>
+                    <input type="password" id="reset-password" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:outline-none focus:border-[#41C9B4]" placeholder="6文字以上">
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeResetModal()" class="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition-colors">キャンセル</button>
+                    <button type="submit" class="flex-1 px-4 py-2.5 bg-[#41C9B4] text-white rounded-lg font-bold hover:bg-[#38b3a0] shadow-md transition-colors">再設定する</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- 🔑 ログイン画面 -->
     <div id="login-container" class="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-300 p-8 sm:p-10 flex flex-col items-center relative z-10 animate-fadeIn">
@@ -36,7 +80,7 @@
                 <button id="tab-register" onclick="switchAuthMode('register')" class="pb-2 px-4 font-bold text-[#41C9B4] border-b-2 border-[#41C9B4]">新規登録</button>
                 <button id="tab-login" onclick="switchAuthMode('login')" class="pb-2 px-4 font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600 transition-colors">ログイン</button>
             </div>
-            <div id="auth-error" class="hidden mb-3 p-3 bg-red-50 text-red-600 text-xs font-bold rounded-lg text-center border border-red-200"></div>
+            
             <form id="email-auth-form" onsubmit="handleEmailAuth(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 mb-1">メールアドレス</label>
@@ -46,6 +90,12 @@
                     <label class="block text-xs font-bold text-gray-700 mb-1">パスワード</label>
                     <input type="password" id="auth-password" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:outline-none focus:border-[#41C9B4]" placeholder="6文字以上">
                 </div>
+                
+                <!-- パスワードを忘れた方のリンク（ログインモード時のみ表示） -->
+                <div id="forgot-password-container" class="hidden text-right">
+                    <button type="button" onclick="showResetModal()" class="text-xs text-[#41C9B4] font-bold hover:underline">パスワードを忘れた方はこちら</button>
+                </div>
+
                 <button type="submit" id="auth-submit-btn" class="w-full py-3 rounded-full font-bold bg-[#41C9B4] text-white hover:bg-[#38b3a0] shadow-md transition-colors">
                     新規登録
                 </button>
@@ -62,7 +112,7 @@
 
     <!-- 📝 アプリ本体 -->
     <div id="app-container" class="hidden w-full max-w-4xl bg-white rounded-2xl shadow-sm border border-gray-300 overflow-hidden relative z-10 self-start animate-fadeIn">
-        <div class="p-6 sm:p-8 border-b border-gray-300">
+        <div class="p-6 sm:p-8 border-b border-gray-300 bg-white">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-2">
                     <div class="bg-[#41C9B4] text-white font-bold px-2 py-1 rounded-full text-xs shrink-0">note</div>
@@ -89,65 +139,104 @@
             <p class="text-gray-700 text-xs sm:text-sm font-medium">プロフィールを使い分けて、最適な記事を生成しましょう</p>
         </div>
 
-        <div class="p-6 sm:p-8">
+        <div class="p-6 sm:p-8 bg-[#F8F9FA]">
             <div class="flex items-center justify-between w-full mb-8 relative" id="step-indicator"></div>
 
             <!-- ステップ1：プロフィール管理 -->
             <div id="step-1" class="space-y-6 animate-fadeIn">
-                <div class="p-4 bg-teal-50 border border-teal-100 rounded-xl mb-6 shadow-inner">
-                    <label class="block text-xs font-bold text-teal-800 mb-2 flex justify-between items-center">
-                        <span class="flex items-center gap-1"><i data-lucide="users" class="w-4 h-4"></i> 保存済みのプロフ</span>
+                
+                <div class="p-4 bg-white border border-gray-200 rounded-xl mb-6 shadow-sm">
+                    <label class="block text-xs font-bold text-gray-700 mb-2 flex justify-between items-center">
+                        <span class="flex items-center gap-1 text-[#41C9B4]"><i data-lucide="users" class="w-4 h-4"></i> 保存済みのプロフを呼び出す</span>
                         <div class="flex gap-2">
-                             <button onclick="exportData('articleProfilesList', 'profiles.json')" class="text-[10px] bg-white border border-teal-200 px-2 py-0.5 rounded shadow-sm hover:bg-gray-50">保存(DL)</button>
-                             <button onclick="importData('articleProfilesList', loadProfilesList)" class="text-[10px] bg-white border border-teal-200 px-2 py-0.5 rounded shadow-sm hover:bg-gray-50">復元(UP)</button>
+                             <button onclick="exportData('articleProfilesList', 'profiles.json')" class="text-[10px] text-gray-500 bg-white border border-gray-300 px-2 py-0.5 rounded shadow-sm hover:bg-gray-50 flex items-center gap-1"><i data-lucide="download" class="w-3 h-3"></i>保存(DL)</button>
+                             <button onclick="importData('articleProfilesList', loadProfilesList)" class="text-[10px] text-gray-500 bg-white border border-gray-300 px-2 py-0.5 rounded shadow-sm hover:bg-gray-50 flex items-center gap-1"><i data-lucide="upload" class="w-3 h-3"></i>復元(UP)</button>
                         </div>
                     </label>
                     <div class="flex flex-col sm:flex-row gap-2">
-                        <select id="profile-select" onchange="loadSelectedProfile()" class="flex-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:border-[#41C9B4] font-bold text-gray-700">
+                        <select id="profile-select" onchange="loadSelectedProfile()" class="flex-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:border-[#41C9B4] font-bold text-gray-700 bg-gray-50">
                             <option value="">-- 新規作成 --</option>
                         </select>
                         <div class="flex gap-2">
-                            <button onclick="saveCurrentProfile()" class="flex-1 sm:flex-none px-4 py-2 bg-[#41C9B4] text-white rounded-lg text-sm font-bold hover:bg-[#38b3a0] shadow-sm transition-colors whitespace-nowrap">
-                                <i data-lucide="save" class="w-4 h-4 inline mr-1"></i>保存
+                            <button onclick="saveCurrentProfile()" class="flex-1 sm:flex-none px-5 py-2 bg-white border-2 border-[#41C9B4] text-[#41C9B4] rounded-lg text-sm font-bold hover:bg-teal-50 transition-colors whitespace-nowrap flex items-center justify-center gap-1">
+                                <i data-lucide="save" class="w-4 h-4"></i>保存する
                             </button>
-                            <button onclick="deleteSelectedProfile()" class="px-3 py-2 border-2 border-red-200 text-red-500 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors">
+                            <button onclick="deleteSelectedProfile()" class="px-3 py-2 border-2 border-red-200 text-red-500 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors" title="削除">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div class="space-y-5">
-                    <div>
-                        <label class="block text-sm font-bold mb-2 text-gray-800">名前・ハンドル名</label>
-                        <input type="text" id="input-name" class="w-full border-2 border-gray-300 rounded-lg p-3 focus:outline-none focus:border-[#41C9B4] transition-colors" placeholder="例：たけじい" />
+                <div class="bg-[#Fdfcf7] border border-amber-200 p-5 sm:p-6 rounded-xl shadow-sm">
+                    <h3 class="font-bold text-amber-800 flex items-center gap-2 mb-5 border-b border-amber-200 pb-2">
+                        <i data-lucide="user-circle" class="w-5 h-5"></i> 基本プロフィール 
+                    </h3>
+                    <div class="space-y-5">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-800">名前・ハンドル名 <span class="text-[10px] text-red-500 ml-1">必須</span></label>
+                                <input type="text" id="input-name" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-colors" placeholder="例：たけじい" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-800">職業・肩書き <span class="text-[10px] text-red-500 ml-1">必須</span></label>
+                                <input type="text" id="input-job" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-colors" placeholder="例：フリーランスライター" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-gray-800">経験・実績 <span class="text-[10px] text-red-500 ml-1">必須</span></label>
+                            <textarea id="input-experience" class="w-full border border-gray-300 rounded-lg p-3 h-20 text-sm resize-none focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-colors" placeholder="例：AI活用ツール開発が得意。10年以上Webマーケに携わる。"></textarea>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-800">文体・キャラクター <span class="text-[10px] text-gray-400 ml-1">任意</span></label>
+                                <input type="text" id="input-tone" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-colors" placeholder="例：親しみやすい口語体" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-800">伝えたい強み <span class="text-[10px] text-gray-400 ml-1">任意</span></label>
+                                <input type="text" id="input-strength" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-colors" placeholder="例：初心者にも分かりやすく解説" />
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-2 text-gray-800">職業・肩書き</label>
-                        <input type="text" id="input-job" class="w-full border-2 border-gray-300 rounded-lg p-3 focus:outline-none focus:border-[#41C9B4] transition-colors" placeholder="例：フリーランスライター" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-2 text-gray-800">経験・実績</label>
-                        <textarea id="input-experience" class="w-full border-2 border-gray-300 rounded-lg p-3 h-24 resize-none focus:outline-none focus:border-[#41C9B4] transition-colors" placeholder="例：AI活用ツール開発が得意。"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-2 text-gray-800">文体・キャラクター</label>
-                        <input type="text" id="input-tone" class="w-full border-2 border-gray-300 rounded-lg p-3 focus:outline-none focus:border-[#41C9B4] transition-colors" placeholder="例：親しみやすい口語体" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-2 text-gray-800">伝えたい強み</label>
-                        <textarea id="input-strength" class="w-full border-2 border-gray-300 rounded-lg p-3 h-24 resize-none focus:outline-none focus:border-[#41C9B4] transition-colors" placeholder="例：初心者にも分かりやすく解説する"></textarea>
+                </div>
+
+                <div class="bg-[#fffcfd] border border-rose-200 p-5 sm:p-6 rounded-xl shadow-sm">
+                    <h3 class="font-bold text-rose-800 flex items-center gap-2 mb-5 border-b border-rose-200 pb-2">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-pink-500"></i> 個性を深掘りする追加項目 <span class="text-[10px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-normal">任意</span>
+                    </h3>
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-gray-800">語れるニッチなテーマ Top3</label>
+                            <p class="text-[10px] text-gray-500 mb-2">「止まらなくなる」テーマを書くと記事に熱量が出ます</p>
+                            <textarea id="input-niche" class="w-full border border-gray-300 rounded-lg p-3 h-16 text-sm resize-none focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-400 transition-colors" placeholder="例：①地方でのAI副業 ②note収益化の失敗談 ③ChatGPT × Notion活用術"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-2 text-gray-800">読者に感じてほしい読後感</label>
+                            <div class="flex flex-wrap gap-x-4 gap-y-2 mb-2">
+                                <label class="flex items-center gap-1.5 text-sm cursor-pointer hover:text-rose-600"><input type="radio" name="aftertaste" value="「へぇ〜！」発見" class="w-4 h-4 text-rose-500 focus:ring-rose-400 border-gray-300"> 発見</label>
+                                <label class="flex items-center gap-1.5 text-sm cursor-pointer hover:text-rose-600"><input type="radio" name="aftertaste" value="「やってみよう」行動" class="w-4 h-4 text-rose-500 focus:ring-rose-400 border-gray-300"> 行動</label>
+                                <label class="flex items-center gap-1.5 text-sm cursor-pointer hover:text-rose-600"><input type="radio" name="aftertaste" value="「仲間だ」共感" checked class="w-4 h-4 text-rose-500 focus:ring-rose-400 border-gray-300"> 共感</label>
+                                <label class="flex items-center gap-1.5 text-sm cursor-pointer hover:text-rose-600"><input type="radio" name="aftertaste" value="「信頼できる」安心" class="w-4 h-4 text-rose-500 focus:ring-rose-400 border-gray-300"> 安心</label>
+                                <label class="flex items-center gap-1.5 text-sm cursor-pointer hover:text-rose-600"><input type="radio" name="aftertaste" value="その他" class="w-4 h-4 text-rose-500 focus:ring-rose-400 border-gray-300"> その他</label>
+                            </div>
+                            <input type="text" id="input-aftertaste-other" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-400 transition-colors bg-white" placeholder="その他の場合は詳しく（例：読んだあとに少し背中を押せる感覚）" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-gray-800">絶対に使わない言葉・嫌いな表現</label>
+                            <p class="text-[10px] text-gray-500 mb-2">禁止ワード設定が「らしくない文章」を最も効果的に防ぎます</p>
+                            <textarea id="input-forbidden" class="w-full border border-gray-300 rounded-lg p-3 h-16 text-sm resize-none focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-400 transition-colors" placeholder="例：「〜すべき」「絶対に」「初心者でも簡単」「革命的」など"></textarea>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="flex justify-end mt-4">
-                    <button onclick="clearProfileForm()" class="px-4 py-2 text-xs font-bold text-gray-500 border-2 border-gray-300 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-1">
-                        <i data-lucide="eraser" class="w-3 h-3"></i> 入力欄クリア
+                    <button onclick="clearProfileForm()" class="px-4 py-2 text-xs font-bold text-gray-500 bg-white border border-gray-300 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-1 shadow-sm">
+                        <i data-lucide="eraser" class="w-3 h-3"></i> 入力内容をすべてクリア
                     </button>
                 </div>
 
                 <div class="mt-8 flex justify-center">
-                    <button id="btn-next-to-2" class="w-full max-w-md py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-[#41C9B4] text-white hover:bg-[#38b3a0] shadow-md">
+                    <button id="btn-next-to-2" class="w-full max-w-md py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-gray-300 text-gray-500 cursor-not-allowed shadow-sm">
                         <span>次へ：カテゴリを選ぶ</span> <i data-lucide="chevron-right" class="w-5 h-5"></i>
                     </button>
                 </div>
@@ -155,11 +244,11 @@
 
             <!-- ステップ2：カテゴリ -->
             <div id="step-2" class="hidden-step space-y-8 animate-fadeIn">
-                <div id="category-container" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
-                <div id="price-container" class="grid grid-cols-2 md:grid-cols-5 gap-3"></div>
+                <div id="category-container" class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-white p-6 rounded-xl shadow-sm border border-gray-200"></div>
+                <div id="price-container" class="grid grid-cols-2 md:grid-cols-5 gap-3 bg-white p-6 rounded-xl shadow-sm border border-gray-200"></div>
                 <div class="mt-8 flex justify-center gap-4">
-                    <button onclick="goToStep(1)" class="px-8 py-3 rounded-full font-bold border-2 border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">戻る</button>
-                    <button id="btn-next-to-3" disabled class="flex-1 max-w-sm py-3 rounded-full font-bold bg-gray-300 text-gray-500 cursor-not-allowed flex justify-center items-center gap-2">
+                    <button onclick="goToStep(1)" class="px-8 py-3 rounded-full font-bold border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">戻る</button>
+                    <button id="btn-next-to-3" disabled class="flex-1 max-w-sm py-3 rounded-full font-bold bg-gray-300 text-gray-500 cursor-not-allowed flex justify-center items-center gap-2 shadow-sm">
                         <span>次へ：キーワード</span> <i data-lucide="chevron-right" class="w-5 h-5"></i>
                     </button>
                 </div>
@@ -167,11 +256,15 @@
 
             <!-- ステップ3：キーワード -->
             <div id="step-3" class="hidden-step space-y-6 animate-fadeIn max-w-2xl mx-auto">
-                <div class="text-center mb-8"><h2 class="text-2xl font-bold mb-2">何について書きますか？</h2></div>
-                <input type="text" id="input-keyword" placeholder="例：シニア向けの筋トレ術" class="w-full border-2 border-gray-300 rounded-xl p-4 text-lg text-center" />
+                <div class="bg-white p-8 rounded-xl shadow-sm border border-gray-200 text-center">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-800 flex items-center justify-center gap-2">
+                        <i data-lucide="pen-tool" class="w-6 h-6 text-[#41C9B4]"></i> 何について書きますか？
+                    </h2>
+                    <input type="text" id="input-keyword" placeholder="例：シニア向けの筋トレ術" class="w-full border-2 border-gray-300 rounded-xl p-4 text-lg text-center focus:outline-none focus:border-[#41C9B4] transition-colors" />
+                </div>
                 <div class="mt-8 flex justify-center gap-4">
-                    <button onclick="goToStep(2)" class="px-6 py-3 text-gray-700 hover:bg-gray-200 rounded-full font-bold">戻る</button>
-                    <button id="btn-generate-ideas" disabled class="flex-1 max-w-sm py-4 rounded-full font-bold flex justify-center items-center gap-2 bg-gray-300 text-gray-500">
+                    <button onclick="goToStep(2)" class="px-6 py-3 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-full font-bold shadow-sm">戻る</button>
+                    <button id="btn-generate-ideas" disabled class="flex-1 max-w-sm py-4 rounded-full font-bold flex justify-center items-center gap-2 bg-gray-300 text-gray-500 shadow-sm">
                         <span>記事候補を生成する</span> <i data-lucide="bot" class="w-5 h-5"></i>
                     </button>
                 </div>
@@ -180,14 +273,20 @@
             <!-- ステップ4：案表示 -->
             <div id="step-4" class="hidden-step space-y-6 animate-fadeIn">
                 <div id="step-4-loading" class="hidden flex-col items-center justify-center py-20">
-                    <i data-lucide="loader-2" class="animate-spin text-[#41C9B4] mb-4 w-12 h-12"></i>
-                    <h2 class="text-xl font-bold">案を作成中...</h2>
+                    <div class="relative">
+                        <i data-lucide="bot" class="w-16 h-16 text-[#41C9B4] animate-bounce"></i>
+                        <i data-lucide="loader-2" class="absolute -bottom-4 -right-4 animate-spin text-amber-500 w-8 h-8"></i>
+                    </div>
+                    <h2 class="text-xl font-bold mt-6 text-gray-700">プロの切り口で案を作成中...</h2>
                 </div>
                 <div id="step-4-content" class="hidden">
-                    <div id="ideas-container" class="space-y-4"></div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i data-lucide="lightbulb" class="w-5 h-5 text-amber-500"></i> AIが考えた記事構成案</h3>
+                        <div id="ideas-container" class="space-y-4"></div>
+                    </div>
                     <div class="mt-8 flex justify-center gap-4">
-                        <button onclick="goToStep(3)" class="px-6 py-3 text-gray-700 hover:bg-gray-200 rounded-full font-bold">やり直す</button>
-                        <button id="btn-generate-article" disabled class="px-8 py-4 rounded-full font-bold bg-gray-300 text-gray-500 flex justify-center items-center gap-2">
+                        <button onclick="goToStep(3)" class="px-6 py-3 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-full font-bold shadow-sm">やり直す</button>
+                        <button id="btn-generate-article" disabled class="px-8 py-4 rounded-full font-bold bg-gray-300 text-gray-500 flex justify-center items-center gap-2 shadow-sm">
                             <span>この記事を執筆する</span> <i data-lucide="chevron-right" class="w-5 h-5"></i>
                         </button>
                     </div>
@@ -197,18 +296,25 @@
             <!-- ステップ5：完成 -->
             <div id="step-5" class="hidden-step space-y-6 animate-fadeIn">
                 <div id="step-5-loading" class="hidden flex-col items-center justify-center py-20">
-                    <i data-lucide="loader-2" class="animate-spin text-[#41C9B4] mb-4 w-12 h-12"></i>
-                    <h2 class="text-xl font-bold">執筆中...</h2>
+                    <div class="relative">
+                        <i data-lucide="file-text" class="w-16 h-16 text-[#41C9B4] animate-pulse"></i>
+                        <i data-lucide="loader-2" class="absolute -bottom-4 -right-4 animate-spin text-rose-500 w-8 h-8"></i>
+                    </div>
+                    <h2 class="text-xl font-bold mt-6 text-gray-700">あなたの個性を乗せて執筆中...</h2>
                 </div>
                 <div id="step-5-content" class="hidden">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold text-[#41C9B4]">完成！</h2>
-                        <button onclick="copyToClipboard('final-article-content')" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md flex items-center gap-1">
-                            <i data-lucide="copy" class="w-4 h-4"></i> コピーする
-                        </button>
+                    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-gray-200">
+                        <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+                            <h2 class="text-xl font-bold text-[#41C9B4] flex items-center gap-2">
+                                <i data-lucide="check-circle-2" class="w-6 h-6"></i> 記事が完成しました！
+                            </h2>
+                            <button onclick="copyToClipboard('final-article-content')" class="bg-gray-800 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-md flex items-center gap-2 hover:bg-gray-700 transition-colors">
+                                <i data-lucide="copy" class="w-4 h-4"></i> コピーする
+                            </button>
+                        </div>
+                        <div id="final-article-content" class="bg-gray-50 border border-gray-200 rounded-xl p-6 whitespace-pre-wrap font-serif leading-loose max-h-[600px] overflow-y-auto text-gray-800 text-base"></div>
                     </div>
-                    <div id="final-article-content" class="bg-gray-50 border-2 border-gray-300 rounded-xl p-6 whitespace-pre-wrap font-serif leading-relaxed max-h-[600px] overflow-y-auto"></div>
-                    <div class="mt-8 flex justify-center"><button onclick="resetApp()" class="px-6 py-3 text-gray-700 hover:bg-gray-200 rounded-full font-bold transition-colors">最初から作る</button></div>
+                    <div class="mt-8 flex justify-center"><button onclick="resetApp()" class="px-8 py-3 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-full font-bold shadow-sm transition-colors">最初から作る</button></div>
                 </div>
             </div>
         </div>
@@ -216,29 +322,32 @@
 
     <!-- 履歴モーダル -->
     <div id="history-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex justify-center items-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center bg-gray-50">
                 <div class="flex items-center gap-4">
-                    <h2 class="text-xl font-bold flex items-center gap-2"><i data-lucide="history" class="w-5 h-5 text-[#41C9B4]"></i> 履歴</h2>
-                    <div class="flex gap-2">
-                        <button onclick="exportData('articleCreatorHistory', 'history.json')" class="text-xs border border-gray-300 px-3 py-1 rounded shadow-sm hover:bg-gray-50">保存(書き出し)</button>
-                        <button onclick="importData('articleCreatorHistory', openHistoryModal)" class="text-xs border border-gray-300 px-3 py-1 rounded shadow-sm hover:bg-gray-50">復元(読み込み)</button>
+                    <h2 class="text-xl font-bold flex items-center gap-2 text-gray-800"><i data-lucide="history" class="w-5 h-5 text-[#41C9B4]"></i> 作成履歴</h2>
+                    <div class="flex gap-2 ml-4 border-l border-gray-300 pl-4">
+                        <button onclick="exportData('articleCreatorHistory', 'history.json')" class="text-xs text-gray-600 bg-white border border-gray-300 px-3 py-1.5 rounded shadow-sm hover:bg-gray-100 flex items-center gap-1"><i data-lucide="download" class="w-3 h-3"></i>保存(DL)</button>
+                        <button onclick="importData('articleCreatorHistory', openHistoryModal)" class="text-xs text-gray-600 bg-white border border-gray-300 px-3 py-1.5 rounded shadow-sm hover:bg-gray-100 flex items-center gap-1"><i data-lucide="upload" class="w-3 h-3"></i>復元(UP)</button>
                     </div>
                 </div>
-                <button onclick="closeHistoryModal()"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="closeHistoryModal()" class="text-gray-400 hover:text-gray-600 bg-white rounded-full p-1 border border-gray-200"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <div class="flex flex-1 overflow-hidden h-[600px]">
-                <div class="w-1/3 border-r border-gray-200 overflow-y-auto p-2 bg-gray-50" id="history-list"></div>
-                <div class="w-2/3 flex flex-col bg-white overflow-hidden">
-                    <div id="history-detail-empty" class="flex-1 flex flex-col items-center justify-center text-gray-400"><p>記事を選択してください</p></div>
+            <div class="flex flex-col md:flex-row flex-1 overflow-hidden h-[600px]">
+                <div class="w-full md:w-1/3 border-r border-gray-200 overflow-y-auto p-3 bg-gray-50" id="history-list"></div>
+                <div class="w-full md:w-2/3 flex flex-col bg-white overflow-hidden">
+                    <div id="history-detail-empty" class="flex-1 flex flex-col items-center justify-center text-gray-400">
+                        <i data-lucide="file-search" class="w-12 h-12 mb-3 text-gray-300"></i>
+                        <p>左のリストから記事を選択してください</p>
+                    </div>
                     <div id="history-detail-content" class="hidden flex-1 flex flex-col h-full overflow-hidden animate-fadeIn">
-                        <div class="p-4 border-b border-gray-200 bg-white flex justify-between items-center">
-                            <h3 id="history-detail-title" class="font-bold text-gray-900 truncate"></h3>
-                            <button onclick="copyToClipboard('history-article-body')" class="bg-[#41C9B4] text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm flex items-center gap-1">
+                        <div class="p-4 border-b border-gray-200 bg-white flex justify-between items-center shadow-sm z-10">
+                            <h3 id="history-detail-title" class="font-bold text-gray-900 truncate pr-4 text-lg"></h3>
+                            <button onclick="copyToClipboard('history-article-body')" class="bg-[#41C9B4] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center gap-1.5 shrink-0 hover:bg-[#38b3a0]">
                                 <i data-lucide="copy" class="w-4 h-4"></i> コピー
                             </button>
                         </div>
-                        <div class="p-6 overflow-y-auto flex-1 whitespace-pre-wrap font-serif leading-relaxed" id="history-article-body"></div>
+                        <div class="p-6 md:p-8 overflow-y-auto flex-1 whitespace-pre-wrap font-serif leading-loose text-gray-800 text-base" id="history-article-body"></div>
                     </div>
                 </div>
             </div>
@@ -254,6 +363,50 @@
             }
         });
 
+        // 🔔 エラーアラート制御
+        function showAlert(message) {
+            document.getElementById('alert-message').innerText = message;
+            const modal = document.getElementById('alert-modal');
+            modal.classList.remove('hidden');
+            // 3秒後に自動で閉じる
+            setTimeout(() => closeAlert(), 3000);
+        }
+        function closeAlert() { document.getElementById('alert-modal').classList.add('hidden'); }
+
+        // 🔑 パスワードリセット制御
+        function showResetModal() { document.getElementById('reset-modal').classList.remove('hidden'); }
+        function closeResetModal() { 
+            document.getElementById('reset-modal').classList.add('hidden'); 
+            document.getElementById('reset-email').value = '';
+            document.getElementById('reset-password').value = '';
+        }
+        function handlePasswordReset(e) {
+            e.preventDefault();
+            const email = document.getElementById('reset-email').value;
+            const newPassword = document.getElementById('reset-password').value;
+            let users = JSON.parse(localStorage.getItem('appUsers') || '{}');
+
+            if (!users[email]) {
+                showAlert("このメールアドレスは登録されていません。");
+                return;
+            }
+            if (newPassword.length < 6) {
+                showAlert("パスワードは6文字以上で入力してください。");
+                return;
+            }
+
+            // パスワードを上書き
+            users[email].password = newPassword;
+            localStorage.setItem('appUsers', JSON.stringify(users));
+            
+            closeResetModal();
+            showAlert("パスワードを再設定しました。新しいパスワードでログインしてください。");
+            
+            // ログイン画面の入力欄を埋めてあげる（親切設計）
+            document.getElementById('auth-email').value = email;
+            document.getElementById('auth-password').value = newPassword;
+        }
+
         // Googleログイン
         window.handleCredentialResponse = function(response) {
             try {
@@ -263,10 +416,15 @@
         };
 
         let currentStep = 1;
-        let formData = { name: '', jobTitle: '', experience: '', tone: '', strength: '', categoryId: '', priceId: '500_800', keyword: '' };
+        let formData = { 
+            name: '', jobTitle: '', experience: '', tone: '', strength: '', 
+            nicheThemes: '', aftertaste: '「仲間だ」共感', aftertasteOther: '', forbiddenWords: '',
+            categoryId: '', priceId: '500_800', keyword: '' 
+        };
         let savedProfiles = {};
         let generatedIdeas = [];
         let selectedIdeaIndex = null;
+        let authMode = 'register';
         const BACKEND_URL = "https://note-article-api.webrich60.deno.net";
 
         const CATEGORIES = [
@@ -283,8 +441,50 @@
         function showLogin() { document.getElementById('login-container').classList.remove('hidden'); document.getElementById('app-container').classList.add('hidden'); document.body.classList.add('items-center'); }
         function logout() { if(confirm("ログアウトしますか？")) { localStorage.removeItem('appLoggedIn'); showLogin(); } }
         function loginSuccess(u) { localStorage.setItem('appLoggedIn', 'true'); localStorage.setItem('appUserInfo', JSON.stringify(u)); showApp(); }
-        function handleEmailAuth(e) { e.preventDefault(); loginSuccess({ name: document.getElementById('auth-email').value.split('@')[0], picture: '' }); }
-        function switchAuthMode(m) { document.getElementById('tab-register').className = m === 'register' ? "pb-2 px-4 font-bold text-[#41C9B4] border-b-2 border-[#41C9B4]" : "pb-2 px-4 font-bold text-gray-400 border-b-2 border-transparent"; document.getElementById('tab-login').className = m === 'login' ? "pb-2 px-4 font-bold text-[#41C9B4] border-b-2 border-[#41C9B4]" : "pb-2 px-4 font-bold text-gray-400 border-b-2 border-transparent"; document.getElementById('auth-submit-btn').innerText = m === 'register' ? "新規登録" : "ログイン"; }
+        
+        // 🔒 パスワード認証と画面切り替え
+        function switchAuthMode(m) { 
+            authMode = m; 
+            document.getElementById('tab-register').className = m === 'register' ? "pb-2 px-4 font-bold text-[#41C9B4] border-b-2 border-[#41C9B4]" : "pb-2 px-4 font-bold text-gray-400 border-b-2 border-transparent"; 
+            document.getElementById('tab-login').className = m === 'login' ? "pb-2 px-4 font-bold text-[#41C9B4] border-b-2 border-[#41C9B4]" : "pb-2 px-4 font-bold text-gray-400 border-b-2 border-transparent"; 
+            document.getElementById('auth-submit-btn').innerText = m === 'register' ? "新規登録" : "ログイン"; 
+            
+            // ログイン画面の時だけ「パスワードを忘れた方」を表示
+            if (m === 'login') {
+                document.getElementById('forgot-password-container').classList.remove('hidden');
+            } else {
+                document.getElementById('forgot-password-container').classList.add('hidden');
+            }
+        }
+
+        function handleEmailAuth(e) { 
+            e.preventDefault(); 
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+
+            let users = JSON.parse(localStorage.getItem('appUsers') || '{}');
+
+            if (authMode === 'register') {
+                if (users[email]) {
+                    showAlert("このメールアドレスは既に登録されています。");
+                    return;
+                }
+                if (password.length < 6) {
+                    showAlert("パスワードは6文字以上で入力してください。");
+                    return;
+                }
+                users[email] = { password: password, name: email.split('@')[0] };
+                localStorage.setItem('appUsers', JSON.stringify(users));
+                loginSuccess({ name: email.split('@')[0], picture: '' });
+            } else if (authMode === 'login') {
+                const user = users[email];
+                if (!user || user.password !== password) {
+                    showAlert("メールアドレスまたはパスワードが間違っています。");
+                    return;
+                }
+                loginSuccess({ name: user.name, picture: '' });
+            }
+        }
 
         // 📝 プロフィール管理
         function loadProfilesList() {
@@ -303,23 +503,31 @@
             const k = document.getElementById('profile-select').value;
             if (k && savedProfiles[k]) {
                 Object.assign(formData, savedProfiles[k]);
-                ['name', 'job', 'experience', 'tone', 'strength'].forEach(id => {
+                ['name', 'job', 'experience', 'tone', 'strength', 'niche', 'forbidden', 'aftertaste-other'].forEach(id => {
                     const el = document.getElementById('input-' + id);
-                    const dk = id === 'job' ? 'jobTitle' : id;
+                    let dk = id;
+                    if(id === 'job') dk = 'jobTitle';
+                    else if(id === 'niche') dk = 'nicheThemes';
+                    else if(id === 'forbidden') dk = 'forbiddenWords';
+                    else if(id === 'aftertaste-other') dk = 'aftertasteOther';
                     if(el) el.value = formData[dk] || '';
                 });
+                const aftertaste = formData.aftertaste || '「仲間だ」共感';
+                const radio = document.querySelector(`input[name="aftertaste"][value="${aftertaste}"]`);
+                if(radio) radio.checked = true;
+                
                 validate1();
             } else { clearProfileForm(); }
         }
         function saveCurrentProfile() {
-            if (!formData.name) { alert("「名前」は必須です"); return; }
+            if (!formData.name || !formData.jobTitle || !formData.experience) { showAlert("必須項目（名前、職業、経験）を入力してください"); return; }
             let k = document.getElementById('profile-select').value || prompt("プロフ保存名を入れてください（例：プロフ1、本業用）", "");
             if (!k) return;
             savedProfiles[k] = { ...formData };
             localStorage.setItem('articleProfilesList', JSON.stringify(savedProfiles));
             updateDropdown();
             document.getElementById('profile-select').value = k;
-            alert("プロフィールを保存しました！");
+            showAlert("プロフィールを保存しました！");
         }
         function deleteSelectedProfile() {
             const k = document.getElementById('profile-select').value;
@@ -327,14 +535,27 @@
             if (confirm(`「${k}」を削除しますか？`)) { delete savedProfiles[k]; localStorage.setItem('articleProfilesList', JSON.stringify(savedProfiles)); updateDropdown(); clearProfileForm(); }
         }
         function clearProfileForm() {
-            ['name', 'job', 'experience', 'tone', 'strength'].forEach(id => { const el = document.getElementById('input-' + id); if(el) el.value = ''; const dk = id === 'job' ? 'jobTitle' : id; formData[dk] = ''; });
+            ['name', 'job', 'experience', 'tone', 'strength', 'niche', 'forbidden', 'aftertaste-other'].forEach(id => { 
+                const el = document.getElementById('input-' + id); 
+                if(el) el.value = ''; 
+                let dk = id;
+                if(id === 'job') dk = 'jobTitle';
+                else if(id === 'niche') dk = 'nicheThemes';
+                else if(id === 'forbidden') dk = 'forbiddenWords';
+                else if(id === 'aftertaste-other') dk = 'aftertasteOther';
+                formData[dk] = ''; 
+            });
+            formData.aftertaste = '「仲間だ」共感';
+            const radio = document.querySelector(`input[name="aftertaste"][value="「仲間だ」共感"]`);
+            if(radio) radio.checked = true;
+            
             document.getElementById('profile-select').value = ''; validate1();
         }
 
         // 📂 データ書き出し・読み込み（エクスポート・インポート）
         function exportData(key, filename) {
             const data = localStorage.getItem(key);
-            if (!data) { alert("保存されているデータがありません。"); return; }
+            if (!data) { showAlert("保存されているデータがありません。"); return; }
             const blob = new Blob([data], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -352,9 +573,9 @@
                     try {
                         JSON.parse(event.target.result); // Valid check
                         localStorage.setItem(key, event.target.result);
-                        alert("データを読み込みました！");
+                        showAlert("データを読み込みました！");
                         if (callback) callback();
-                    } catch (err) { alert("無効なファイルです。"); }
+                    } catch (err) { showAlert("無効なファイルです。"); }
                 };
                 reader.readAsText(file);
             };
@@ -363,39 +584,65 @@
 
         // UIイベント
         function setupEvents() { 
-            ['name', 'job', 'experience', 'tone', 'strength'].forEach(id => { 
+            ['name', 'job', 'experience', 'tone', 'strength', 'niche', 'forbidden', 'aftertaste-other'].forEach(id => { 
                 const el = document.getElementById('input-' + id);
-                if (el) el.addEventListener('input', e => { formData[id==='job'?'jobTitle':id] = e.target.value; validate1(); }); 
+                if (el) el.addEventListener('input', e => { 
+                    let key = id;
+                    if(id === 'job') key = 'jobTitle';
+                    else if(id === 'niche') key = 'nicheThemes';
+                    else if(id === 'forbidden') key = 'forbiddenWords';
+                    else if(id === 'aftertaste-other') key = 'aftertasteOther';
+                    formData[key] = e.target.value; 
+                    validate1(); 
+                }); 
             });
+            document.querySelectorAll('input[name="aftertaste"]').forEach(radio => {
+                radio.addEventListener('change', e => {
+                    formData.aftertaste = e.target.value;
+                });
+            });
+
             const kwEl = document.getElementById('input-keyword');
             if (kwEl) kwEl.addEventListener('input', e => { formData.keyword = e.target.value; validate3(); });
             
-            // 💡 ここが抜けていたため、ボタンを押しても進みませんでした！修正済みです！
             document.getElementById('btn-next-to-2').addEventListener('click', () => goToStep(2));
             document.getElementById('btn-next-to-3').addEventListener('click', () => goToStep(3)); 
             document.getElementById('btn-generate-ideas').addEventListener('click', handleIdeas);
             document.getElementById('btn-generate-article').addEventListener('click', handleArticle);
         }
         
-        function validate1() { const v = formData.name && formData.jobTitle && formData.experience; const b = document.getElementById('btn-next-to-2'); b.disabled = !v; b.className = v ? "w-full max-w-md py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-[#41C9B4] text-white hover:bg-[#38b3a0] shadow-md" : "w-full max-w-md py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-gray-300 text-gray-500 cursor-not-allowed"; }
-        function validate3() { const v = !!formData.keyword; const b = document.getElementById('btn-generate-ideas'); b.disabled = !v; b.className = v ? "flex-1 max-w-sm py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-[#41C9B4] text-white shadow-md" : "flex-1 max-w-sm py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-gray-300 text-gray-500 cursor-not-allowed"; }
+        function validate1() { const v = formData.name && formData.jobTitle && formData.experience; const b = document.getElementById('btn-next-to-2'); b.disabled = !v; b.className = v ? "w-full max-w-md py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-[#41C9B4] text-white hover:bg-[#38b3a0] shadow-md" : "w-full max-w-md py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"; }
+        function validate3() { const v = !!formData.keyword; const b = document.getElementById('btn-generate-ideas'); b.disabled = !v; b.className = v ? "flex-1 max-w-sm py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-[#41C9B4] text-white shadow-md" : "flex-1 max-w-sm py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"; }
         function goToStep(s) { currentStep = s; renderStepIndicator(); for(let i=1; i<=5; i++) { const el = document.getElementById('step-'+i); if(el) el.classList.toggle('hidden-step', i !== s); } window.scrollTo(0, 0); }
-        function renderStepIndicator() { const s = ['プロフ', 'カテゴリ', 'キーワード', '案', '完成']; let h = '<div class="absolute left-0 top-1/2 w-full h-[1px] bg-gray-200"></div>'; s.forEach((l, i) => { const n = i + 1; const act = currentStep === n; const pas = currentStep > n; h += `<div class="relative z-10 bg-white px-1 flex flex-col items-center"><div class="w-7 h-7 rounded-full border-2 flex items-center justify-center font-bold text-xs ${act ? 'border-[#41C9B4] text-[#41C9B4]' : pas ? 'bg-[#41C9B4] border-[#41C9B4] text-white' : 'border-gray-300 text-gray-400'}">${pas?'✓':n}</div><span class="text-[9px] mt-1">${l}</span></div>`; }); document.getElementById('step-indicator').innerHTML = h; }
+        function renderStepIndicator() { const s = ['プロフ', 'カテゴリ', 'キーワード', '案', '完成']; let h = '<div class="absolute left-0 top-1/2 w-full h-[1px] bg-gray-200"></div>'; s.forEach((l, i) => { const n = i + 1; const act = currentStep === n; const pas = currentStep > n; h += `<div class="relative z-10 bg-white px-2 py-1 flex flex-col items-center"><div class="w-7 h-7 rounded-full border-2 flex items-center justify-center font-bold text-xs ${act ? 'border-[#41C9B4] text-[#41C9B4] shadow-sm' : pas ? 'bg-[#41C9B4] border-[#41C9B4] text-white' : 'border-gray-300 text-gray-400 bg-gray-50'}">${pas?'✓':n}</div><span class="text-[9px] mt-1.5 ${act ? 'font-bold text-gray-800' : 'text-gray-400'}">${l}</span></div>`; }); document.getElementById('step-indicator').innerHTML = h; }
         
-        function renderCategories() { document.getElementById('category-container').innerHTML = CATEGORIES.map(c => `<button onclick="selectCat('${c.id}')" class="flex flex-col items-center p-3 border-2 rounded-xl transition-all ${formData.categoryId===c.id?'border-[#41C9B4] bg-teal-50 shadow-inner':'border-gray-100 hover:border-gray-300'}"><i data-lucide="${c.icon}" class="mb-1 w-5 h-5 ${c.color}"></i><span class="text-[10px] font-bold">${c.label}</span></button>`).join(''); lucide.createIcons(); }
+        function renderCategories() { document.getElementById('category-container').innerHTML = CATEGORIES.map(c => `<button onclick="selectCat('${c.id}')" class="flex flex-col items-center p-4 border-2 rounded-xl transition-all ${formData.categoryId===c.id?'border-[#41C9B4] bg-teal-50 shadow-inner':'border-gray-100 hover:border-gray-300 hover:shadow-sm bg-white'}"><i data-lucide="${c.icon}" class="mb-2 w-6 h-6 ${c.color}"></i><span class="text-xs font-bold text-gray-700">${c.label}</span></button>`).join(''); lucide.createIcons(); }
         function selectCat(id) { 
             formData.categoryId = id; 
             renderCategories(); 
             const b = document.getElementById('btn-next-to-3'); 
             b.disabled = false; 
-            // 💡 ここでも「＞」が崩れないように flex を正しく設定し直しました！
             b.className = "flex-1 max-w-sm py-3 rounded-full font-bold flex justify-center items-center gap-2 bg-[#41C9B4] text-white shadow-md transition-colors hover:bg-[#38b3a0]"; 
         }
         
-        function renderPrices() { const T = [{id:'free',l:'無料'},{id:'300',l:'300円'},{id:'500_800',l:'500円〜'},{id:'1000_2000',l:'1000円〜'},{id:'3000_',l:'3000円〜'}]; document.getElementById('price-container').innerHTML = T.map(t => `<button onclick="selectPrice('${t.id}')" class="p-2 border-2 rounded-xl text-[10px] font-bold ${formData.priceId===t.id?'border-[#41C9B4] bg-teal-50':'border-gray-100'}">${t.l}</button>`).join(''); }
+        function renderPrices() { const T = [{id:'free',l:'無料'},{id:'300',l:'300円'},{id:'500_800',l:'500円〜'},{id:'1000_2000',l:'1000円〜'},{id:'3000_',l:'3000円〜'}]; document.getElementById('price-container').innerHTML = T.map(t => `<button onclick="selectPrice('${t.id}')" class="p-3 border-2 rounded-xl text-xs font-bold transition-all ${formData.priceId===t.id?'border-[#41C9B4] bg-teal-50 shadow-inner text-teal-800':'border-gray-100 hover:border-gray-300 bg-white text-gray-600'}">${t.l}</button>`).join(''); }
         function selectPrice(id) { formData.priceId = id; renderPrices(); }
 
-        // AI通信
+        // AI通信・プロンプト生成
+        function buildProfileContext() {
+            let text = `名前: ${formData.name}\n職業: ${formData.jobTitle}\n経験・実績: ${formData.experience}\n`;
+            if(formData.tone) text += `文体・キャラクター: ${formData.tone}\n`;
+            if(formData.strength) text += `伝えたい強み: ${formData.strength}\n`;
+            if(formData.nicheThemes) text += `語れるニッチなテーマ: ${formData.nicheThemes}\n`;
+            
+            let aftertasteVal = formData.aftertaste;
+            if(aftertasteVal === 'その他' && formData.aftertasteOther) aftertasteVal = formData.aftertasteOther;
+            if(aftertasteVal && aftertasteVal !== 'その他') text += `読者に感じてほしい読後感: ${aftertasteVal}\n`;
+            
+            if(formData.forbiddenWords) text += `絶対に使わない言葉・禁止ワード: ${formData.forbiddenWords}\n`;
+            return text;
+        }
+
         async function callAPI(p, j = false) {
             const r = await fetch(BACKEND_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: p, isJson: j }) });
             if (!r.ok) throw new Error("通信に失敗しました");
@@ -407,13 +654,70 @@
             }
             return t;
         }
-        async function handleIdeas() { goToStep(4); document.getElementById('step-4-loading').classList.remove('hidden'); document.getElementById('step-4-content').classList.add('hidden'); try { const c = CATEGORIES.find(x=>x.id===formData.categoryId).label; const prompt = `ライター${formData.name}(${formData.jobTitle})として、${formData.keyword}のnote案を3つ。カテゴリ：${c}。JSON配列のみ：[{"title":"案1","catchphrase":"キャッチ","outline":["見出し"]}]`; generatedIdeas = await callAPI(prompt, true); renderIdeas(); document.getElementById('step-4-loading').classList.add('hidden'); document.getElementById('step-4-content').classList.remove('hidden'); } catch (e) { alert("Error: " + e.message); goToStep(3); } }
-        function renderIdeas() { document.getElementById('ideas-container').innerHTML = generatedIdeas.map((idea, i) => `<div onclick="selectIdea(${i})" class="p-4 border-2 rounded-xl cursor-pointer ${selectedIdeaIndex===i?'border-[#41C9B4] bg-teal-50':'border-gray-100'}"><h4 class="font-bold text-sm">${idea.title}</h4><p class="text-xs text-teal-600">${idea.catchphrase}</p></div>`).join(''); }
+
+        async function handleIdeas() { 
+            goToStep(4); 
+            document.getElementById('step-4-loading').classList.remove('hidden'); 
+            document.getElementById('step-4-content').classList.add('hidden'); 
+            try { 
+                const cat = CATEGORIES.find(x=>x.id===formData.categoryId).label;
+                const profileCtx = buildProfileContext();
+                
+                const prompt = `あなたはプロのライターです。以下の【プロフィール設定】を持つ人物として、テーマ「${formData.keyword}」のnote記事案を3つ作成してください。
+
+【プロフィール設定】
+${profileCtx}
+【記事の条件】
+カテゴリ：${cat}
+・「読者に感じてほしい読後感」を満たすような切り口にすること
+・「絶対に使わない言葉・禁止ワード」はタイトルやキャッチフレーズに含めないこと
+
+出力形式：必ず以下のJSON配列形式のみで出力してください。
+[{"title":"案1のタイトル","catchphrase":"記事の魅力が伝わるキャッチフレーズ","outline":["見出し1","見出し2","見出し3"]}]`;
+
+                generatedIdeas = await callAPI(prompt, true); 
+                renderIdeas(); 
+                document.getElementById('step-4-loading').classList.add('hidden'); 
+                document.getElementById('step-4-content').classList.remove('hidden'); 
+            } catch (e) { showAlert("Error: " + e.message); goToStep(3); } 
+        }
+
+        function renderIdeas() { document.getElementById('ideas-container').innerHTML = generatedIdeas.map((idea, i) => `<div onclick="selectIdea(${i})" class="p-5 border-2 rounded-xl cursor-pointer transition-all ${selectedIdeaIndex===i?'border-[#41C9B4] bg-teal-50 shadow-inner':'border-gray-200 hover:border-[#41C9B4] bg-white hover:shadow-sm'}"><h4 class="font-bold text-base text-gray-800 mb-1">${idea.title}</h4><p class="text-sm text-teal-600 font-medium">${idea.catchphrase}</p></div>`).join(''); }
         function selectIdea(i) { selectedIdeaIndex = i; renderIdeas(); const b = document.getElementById('btn-generate-article'); b.disabled = false; b.className = "px-8 py-4 rounded-full font-bold flex justify-center items-center gap-2 bg-[#41C9B4] text-white shadow-md transition-colors hover:bg-[#38b3a0]"; }
-        async function handleArticle() { goToStep(5); document.getElementById('step-5-loading').classList.remove('hidden'); document.getElementById('step-5-content').classList.add('hidden'); try { const id = generatedIdeas[selectedIdeaIndex]; const prompt = `${formData.name}として、タイトル「${id.title}」、構成「${id.outline.join('、')}」で記事を書いて。`; const art = await callAPI(prompt, false); document.getElementById('final-article-content').innerText = art; saveHistory(art, id); document.getElementById('step-5-loading').classList.add('hidden'); document.getElementById('step-5-content').classList.remove('hidden'); } catch (e) { alert("Error: " + e.message); goToStep(4); } }
+        
+        async function handleArticle() { 
+            goToStep(5); 
+            document.getElementById('step-5-loading').classList.remove('hidden'); 
+            document.getElementById('step-5-content').classList.add('hidden'); 
+            try { 
+                const id = generatedIdeas[selectedIdeaIndex];
+                const profileCtx = buildProfileContext();
+                
+                const prompt = `あなたはプロのライターです。以下の【プロフィール設定】を持つ人物として、指定されたタイトルと構成でnote記事を執筆してください。
+
+【プロフィール設定】
+${profileCtx}
+【執筆の条件】
+タイトル：「${id.title}」
+構成：「${id.outline.join('、')}」
+・「文体・キャラクター」を忠実に守ること
+・「絶対に使わない言葉・禁止ワード」は本文中に絶対に含めないこと
+・「読者に感じてほしい読後感」を読んだ人が得られるように文章を締めること
+・読者を惹きつける魅力的な導入から始めること
+・マークダウン形式で見出しを装飾すること
+
+出力形式：記事の本文のみを出力してください。`;
+
+                const art = await callAPI(prompt, false); 
+                document.getElementById('final-article-content').innerText = art; 
+                saveHistory(art, id); 
+                document.getElementById('step-5-loading').classList.add('hidden'); 
+                document.getElementById('step-5-content').classList.remove('hidden'); 
+            } catch (e) { showAlert("Error: " + e.message); goToStep(4); } 
+        }
         
         function saveHistory(t, idea) { let h = JSON.parse(localStorage.getItem('articleCreatorHistory') || '[]'); h.unshift({ id: Date.now(), date: new Date().toLocaleString(), title: idea.title, content: t }); localStorage.setItem('articleCreatorHistory', JSON.stringify(h.slice(0, 30))); }
-        function openHistoryModal() { const h = JSON.parse(localStorage.getItem('articleCreatorHistory') || '[]'); document.getElementById('history-list').innerHTML = h.map(i => `<div onclick="showHistory('${i.id}')" class="p-3 mb-2 border rounded-lg hover:bg-teal-50 cursor-pointer shadow-sm bg-white"><div class="text-[10px] text-gray-400">${i.date}</div><div class="text-sm font-bold truncate text-gray-800">${i.title}</div></div>`).join('') || '<p class="text-gray-400 p-4">履歴なし</p>'; document.getElementById('history-modal').classList.remove('hidden'); }
+        function openHistoryModal() { const h = JSON.parse(localStorage.getItem('articleCreatorHistory') || '[]'); document.getElementById('history-list').innerHTML = h.map(i => `<div onclick="showHistory('${i.id}')" class="p-4 mb-3 border border-gray-200 rounded-xl hover:border-[#41C9B4] cursor-pointer shadow-sm bg-white transition-all"><div class="text-[10px] text-gray-400 mb-1">${i.date}</div><div class="text-sm font-bold text-gray-800 leading-snug">${i.title}</div></div>`).join('') || '<div class="text-center p-8 text-gray-400"><i data-lucide="folder-open" class="w-8 h-8 mx-auto mb-2 opacity-50"></i><p class="text-sm">履歴なし</p></div>'; lucide.createIcons(); document.getElementById('history-modal').classList.remove('hidden'); }
         function showHistory(id) { const h = JSON.parse(localStorage.getItem('articleCreatorHistory') || '[]'); const i = h.find(x => x.id == id); document.getElementById('history-detail-empty').classList.add('hidden'); document.getElementById('history-detail-content').classList.remove('hidden'); document.getElementById('history-detail-title').innerText = i.title; document.getElementById('history-article-body').innerText = i.content; }
         function closeHistoryModal() { document.getElementById('history-modal').classList.add('hidden'); }
         function copyToClipboard(id) {
@@ -421,7 +725,7 @@
             el.value = document.getElementById(id).innerText;
             document.body.appendChild(el); el.select();
             document.execCommand('copy');
-            document.body.removeChild(el); alert("クリップボードにコピーしました！");
+            document.body.removeChild(el); showAlert("クリップボードにコピーしました！");
         }
         function resetApp() { formData.keyword = ''; document.getElementById('input-keyword').value = ''; selectedIdeaIndex = null; goToStep(1); }
 
