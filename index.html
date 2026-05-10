@@ -33,7 +33,7 @@
                 <i data-lucide="alert-circle" class="w-6 h-6"></i>
             </div>
             <div class="flex-1">
-                <h3 class="font-bold text-gray-900 mb-1">エラー</h3>
+                <h3 class="font-bold text-gray-900 mb-1">お知らせ</h3>
                 <p id="alert-message" class="text-sm text-gray-600 mb-4"></p>
                 <div class="flex justify-end">
                     <button onclick="closeAlert()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg text-sm font-bold transition-colors">閉じる</button>
@@ -91,7 +91,6 @@
                     <input type="password" id="auth-password" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:outline-none focus:border-[#41C9B4]" placeholder="6文字以上">
                 </div>
                 
-                <!-- パスワードを忘れた方のリンク（ログインモード時のみ表示） -->
                 <div id="forgot-password-container" class="hidden text-right">
                     <button type="button" onclick="showResetModal()" class="text-xs text-[#41C9B4] font-bold hover:underline">パスワードを忘れた方はこちら</button>
                 </div>
@@ -118,10 +117,12 @@
                     <div class="bg-[#41C9B4] text-white font-bold px-2 py-1 rounded-full text-xs shrink-0">note</div>
                     <h1 class="text-lg sm:text-xl md:text-2xl font-bold">売れる記事作成くん PRO</h1>
                 </div>
+                
+                <!-- 🌟 ログアウトボタンをはっきりわかるように修正 -->
                 <div class="flex items-center gap-3">
                     <img id="user-profile-img" src="" class="hidden w-9 h-9 rounded-full border-2 border-gray-300 shadow-sm shrink-0">
-                    <button onclick="logout()" class="text-gray-400 hover:text-gray-600 transition-colors" title="ログアウト">
-                        <i data-lucide="log-out" class="w-5 h-5"></i>
+                    <button onclick="logout()" class="text-gray-600 bg-white border-2 border-gray-300 rounded-full px-4 py-2 text-sm hover:bg-gray-100 hover:text-gray-800 transition-colors flex items-center gap-2 font-bold whitespace-nowrap shadow-sm" title="ログアウト">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> ログアウト
                     </button>
                 </div>
             </div>
@@ -236,7 +237,7 @@
                 </div>
 
                 <div class="mt-8 flex justify-center">
-                    <button id="btn-next-to-2" class="w-full max-w-md py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-gray-300 text-gray-500 cursor-not-allowed shadow-sm">
+                    <button id="btn-next-to-2" class="w-full max-w-md py-4 rounded-full font-bold flex justify-center items-center gap-2 transition-colors bg-gray-300 text-gray-500 cursor-not-allowed shadow-none">
                         <span>次へ：カテゴリを選ぶ</span> <i data-lucide="chevron-right" class="w-5 h-5"></i>
                     </button>
                 </div>
@@ -248,7 +249,7 @@
                 <div id="price-container" class="grid grid-cols-2 md:grid-cols-5 gap-3 bg-white p-6 rounded-xl shadow-sm border border-gray-200"></div>
                 <div class="mt-8 flex justify-center gap-4">
                     <button onclick="goToStep(1)" class="px-8 py-3 rounded-full font-bold border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">戻る</button>
-                    <button id="btn-next-to-3" disabled class="flex-1 max-w-sm py-3 rounded-full font-bold bg-gray-300 text-gray-500 cursor-not-allowed flex justify-center items-center gap-2 shadow-sm">
+                    <button id="btn-next-to-3" disabled class="flex-1 max-w-sm py-3 rounded-full font-bold bg-gray-300 text-gray-500 cursor-not-allowed flex justify-center items-center gap-2 shadow-none">
                         <span>次へ：キーワード</span> <i data-lucide="chevron-right" class="w-5 h-5"></i>
                     </button>
                 </div>
@@ -264,7 +265,7 @@
                 </div>
                 <div class="mt-8 flex justify-center gap-4">
                     <button onclick="goToStep(2)" class="px-6 py-3 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-full font-bold shadow-sm">戻る</button>
-                    <button id="btn-generate-ideas" disabled class="flex-1 max-w-sm py-4 rounded-full font-bold flex justify-center items-center gap-2 bg-gray-300 text-gray-500 shadow-sm">
+                    <button id="btn-generate-ideas" disabled class="flex-1 max-w-sm py-4 rounded-full font-bold flex justify-center items-center gap-2 bg-gray-300 text-gray-500 shadow-none">
                         <span>記事候補を生成する</span> <i data-lucide="bot" class="w-5 h-5"></i>
                     </button>
                 </div>
@@ -368,7 +369,6 @@
             document.getElementById('alert-message').innerText = message;
             const modal = document.getElementById('alert-modal');
             modal.classList.remove('hidden');
-            // 3秒後に自動で閉じる
             setTimeout(() => closeAlert(), 3000);
         }
         function closeAlert() { document.getElementById('alert-modal').classList.add('hidden'); }
@@ -395,14 +395,12 @@
                 return;
             }
 
-            // パスワードを上書き
             users[email].password = newPassword;
             localStorage.setItem('appUsers', JSON.stringify(users));
             
             closeResetModal();
             showAlert("パスワードを再設定しました。新しいパスワードでログインしてください。");
             
-            // ログイン画面の入力欄を埋めてあげる（親切設計）
             document.getElementById('auth-email').value = email;
             document.getElementById('auth-password').value = newPassword;
         }
@@ -442,14 +440,12 @@
         function logout() { if(confirm("ログアウトしますか？")) { localStorage.removeItem('appLoggedIn'); showLogin(); } }
         function loginSuccess(u) { localStorage.setItem('appLoggedIn', 'true'); localStorage.setItem('appUserInfo', JSON.stringify(u)); showApp(); }
         
-        // 🔒 パスワード認証と画面切り替え
         function switchAuthMode(m) { 
             authMode = m; 
             document.getElementById('tab-register').className = m === 'register' ? "pb-2 px-4 font-bold text-[#41C9B4] border-b-2 border-[#41C9B4]" : "pb-2 px-4 font-bold text-gray-400 border-b-2 border-transparent"; 
             document.getElementById('tab-login').className = m === 'login' ? "pb-2 px-4 font-bold text-[#41C9B4] border-b-2 border-[#41C9B4]" : "pb-2 px-4 font-bold text-gray-400 border-b-2 border-transparent"; 
             document.getElementById('auth-submit-btn').innerText = m === 'register' ? "新規登録" : "ログイン"; 
             
-            // ログイン画面の時だけ「パスワードを忘れた方」を表示
             if (m === 'login') {
                 document.getElementById('forgot-password-container').classList.remove('hidden');
             } else {
@@ -486,7 +482,6 @@
             }
         }
 
-        // 📝 プロフィール管理
         function loadProfilesList() {
             const s = localStorage.getItem('articleProfilesList');
             if (s) { try { savedProfiles = JSON.parse(s); } catch(e) { savedProfiles = {}; } }
@@ -552,7 +547,6 @@
             document.getElementById('profile-select').value = ''; validate1();
         }
 
-        // 📂 データ書き出し・読み込み（エクスポート・インポート）
         function exportData(key, filename) {
             const data = localStorage.getItem(key);
             if (!data) { showAlert("保存されているデータがありません。"); return; }
@@ -571,7 +565,7 @@
                 const reader = new FileReader();
                 reader.onload = event => {
                     try {
-                        JSON.parse(event.target.result); // Valid check
+                        JSON.parse(event.target.result);
                         localStorage.setItem(key, event.target.result);
                         showAlert("データを読み込みました！");
                         if (callback) callback();
@@ -582,7 +576,6 @@
             input.click();
         }
 
-        // UIイベント
         function setupEvents() { 
             ['name', 'job', 'experience', 'tone', 'strength', 'niche', 'forbidden', 'aftertaste-other'].forEach(id => { 
                 const el = document.getElementById('input-' + id);
@@ -628,7 +621,6 @@
         function renderPrices() { const T = [{id:'free',l:'無料'},{id:'300',l:'300円'},{id:'500_800',l:'500円〜'},{id:'1000_2000',l:'1000円〜'},{id:'3000_',l:'3000円〜'}]; document.getElementById('price-container').innerHTML = T.map(t => `<button onclick="selectPrice('${t.id}')" class="p-3 border-2 rounded-xl text-xs font-bold transition-all ${formData.priceId===t.id?'border-[#41C9B4] bg-teal-50 shadow-inner text-teal-800':'border-gray-100 hover:border-gray-300 bg-white text-gray-600'}">${t.l}</button>`).join(''); }
         function selectPrice(id) { formData.priceId = id; renderPrices(); }
 
-        // AI通信・プロンプト生成
         function buildProfileContext() {
             let text = `名前: ${formData.name}\n職業: ${formData.jobTitle}\n経験・実績: ${formData.experience}\n`;
             if(formData.tone) text += `文体・キャラクター: ${formData.tone}\n`;
